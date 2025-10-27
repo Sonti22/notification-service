@@ -1,0 +1,62 @@
+version: '3.9'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - notification-net
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:////data/notifications.db
+      - REDIS_URL=redis://redis:6379/0
+      - LOG_LEVEL=INFO
+      - MAX_RETRY_ATTEMPTS=3
+      - RETRY_BACKOFF_BASE=2
+    volumes:
+      - notification-data:/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - notification-net
+    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:////data/notifications.db
+      - REDIS_URL=redis://redis:6379/0
+      - LOG_LEVEL=INFO
+      - MAX_RETRY_ATTEMPTS=3
+      - RETRY_BACKOFF_BASE=2
+    volumes:
+      - notification-data:/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - notification-net
+    command: ["python", "-m", "src.services.retry"]
+
+volumes:
+  notification-data:
+
+networks:
+  notification-net:
+    driver: bridge
+

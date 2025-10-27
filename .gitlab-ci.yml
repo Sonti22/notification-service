@@ -1,0 +1,99 @@
+stages:
+  - lint_and_test
+  - docker_build
+  - deploy
+
+variables:
+  PYTHON_VERSION: "3.11"
+  DOCKER_IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+  DOCKER_IMAGE_LATEST: $CI_REGISTRY_IMAGE:latest
+
+.python_base:
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-py${PYTHON_VERSION}
+    paths:
+      - .cache/pip
+
+lint:
+  extends: .python_base
+  stage: lint_and_test
+  script:
+    - ruff check src/ tests/
+    - black --check src/ tests/
+    - mypy src/
+  only:
+    - branches
+    - merge_requests
+
+test:
+  extends: .python_base
+  stage: lint_and_test
+  services:
+    - redis:7-alpine
+  variables:
+    REDIS_URL: redis://redis:6379/0
+    DATABASE_URL: sqlite+aiosqlite:///:memory:
+  script:
+    - pytest -v --cov=src --cov-report=term --cov-report=xml --cov-report=html
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    paths:
+      - htmlcov/
+    expire_in: 7 days
+  only:
+    - branches
+    - merge_requests
+
+docker_build:
+  stage: docker_build
+  image: docker:24
+  services:
+    - docker:24-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build -t $DOCKER_IMAGE -t $DOCKER_IMAGE_LATEST .
+    - docker push $DOCKER_IMAGE
+    - docker push $DOCKER_IMAGE_LATEST
+  only:
+    - main
+    - tags
+
+deploy_staging:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl
+  script:
+    - echo "Deploying to staging..."
+    # Example: trigger K8s/Nomad deploy
+    # - kubectl set image deployment/notification-service api=$DOCKER_IMAGE
+  environment:
+    name: staging
+    url: https://staging.example.com
+  only:
+    - main
+
+deploy_production:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl
+  script:
+    - echo "Deploying to production..."
+    # Example: trigger production deploy
+  environment:
+    name: production
+    url: https://api.example.com
+  when: manual
+  only:
+    - tags
+
