@@ -1,44 +1,44 @@
-# Notification Service
+# Сервис Уведомлений
 
-**Production-ready notification delivery service with fallback (Email → SMS → Telegram).**
+**Production-ready сервис доставки уведомлений с каскадной отправкой (Email → SMS → Telegram).**
 
-## Features
+## Возможности
 
-- **Multi-channel delivery**: Email, SMS, Telegram with automatic fallback.
-- **Retry with exponential backoff**: Max 3 attempts, Redis-backed queue.
-- **REST API**: FastAPI (async), JSON, structured logs.
-- **Observability**: Correlation IDs, health checks, ready for Prometheus.
-- **Type-safe**: Full type hints, mypy --strict.
-- **Tested**: Unit, integration, e2e (pytest, ≥80% coverage).
+- **Мультиканальная доставка**: Email, SMS, Telegram с автоматическим переключением при сбое.
+- **Повторные попытки с экспоненциальной задержкой**: Максимум 3 попытки, очередь в Redis.
+- **REST API**: FastAPI (async), JSON, структурированные логи.
+- **Наблюдаемость**: Correlation ID, health checks, готовность к Prometheus.
+- **Типобезопасность**: Полные type hints, mypy --strict.
+- **Протестировано**: Unit, integration, e2e тесты (pytest, покрытие ≥80%).
 
-## Quick Start
+## Быстрый старт
 
-### Local (Docker Compose)
+### Локально (Docker Compose)
 
 ```bash
-# Clone and enter
-git clone <repo-url> notification-service
+# Клонировать и войти
+git clone https://github.com/Sonti22/notification-service.git
 cd notification-service
 
-# Start all services (API + Redis + Worker)
+# Запустить все сервисы (API + Redis + Worker)
 docker-compose up --build
 
-# API available at http://localhost:8000
-# Docs at http://localhost:8000/docs
+# API доступен на http://localhost:8000
+# Документация на http://localhost:8000/docs
 ```
 
-### Send a notification
+### Отправить уведомление
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/notifications \
   -H "Content-Type: application/json" \
   -d '{
     "recipient": "user@example.com",
-    "message": "Hello from notification service!",
+    "message": "Привет от сервиса уведомлений!",
     "channels": ["email", "sms", "telegram"]
   }'
 
-# Response:
+# Ответ:
 # {
 #   "id": "uuid",
 #   "status": "pending",
@@ -46,12 +46,12 @@ curl -X POST http://localhost:8000/api/v1/notifications \
 # }
 ```
 
-### Check status
+### Проверить статус
 
 ```bash
 curl http://localhost:8000/api/v1/notifications/{id}
 
-# Response:
+# Ответ:
 # {
 #   "id": "uuid",
 #   "status": "sent",
@@ -60,53 +60,53 @@ curl http://localhost:8000/api/v1/notifications/{id}
 # }
 ```
 
-## Development
+## Разработка
 
-### Prerequisites
+### Требования
 
 - Python 3.11+
-- Redis (or Docker)
-- (Optional) PostgreSQL
+- Redis (или Docker)
+- (Опционально) PostgreSQL
 
-### Setup
+### Настройка
 
 ```bash
-# Create venv
+# Создать виртуальное окружение
 python3.11 -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# Install deps
+# Установить зависимости
 pip install -r requirements.txt
 
-# Run Redis (if not Docker)
+# Запустить Redis (если не Docker)
 redis-server
 
-# Migrate DB (SQLite by default)
+# Инициализировать БД (SQLite по умолчанию)
 python -m src.database
 
-# Run API
+# Запустить API
 uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 
-# Run worker (separate terminal)
+# Запустить worker (отдельный терминал)
 python -m src.services.retry
 ```
 
-### Testing
+### Тестирование
 
 ```bash
-# All tests + coverage
+# Все тесты + покрытие
 make test
 
-# Lint + type check
+# Линтинг + проверка типов
 make lint
 
-# Format
+# Форматирование
 make format
 ```
 
-## Configuration
+## Конфигурация
 
-Environment variables (see `.env.example`):
+Переменные окружения (см. `env.example`):
 
 ```bash
 # API
@@ -114,18 +114,18 @@ API_HOST=0.0.0.0
 API_PORT=8000
 LOG_LEVEL=INFO
 
-# Database (SQLite default, set for Postgres)
+# База данных (SQLite по умолчанию, для Postgres укажите свой URL)
 DATABASE_URL=sqlite+aiosqlite:///./notifications.db
 # DATABASE_URL=postgresql+asyncpg://user:pass@localhost/notifications
 
 # Redis
 REDIS_URL=redis://localhost:6379/0
 
-# Retry
+# Повторные попытки
 MAX_RETRY_ATTEMPTS=3
-RETRY_BACKOFF_BASE=2  # seconds
+RETRY_BACKOFF_BASE=2  # секунды
 
-# Providers (real credentials or leave empty for mocks)
+# Провайдеры (реальные credentials или оставьте пустыми для моков)
 SMTP_HOST=
 SMTP_PORT=587
 SMTP_USER=
@@ -139,11 +139,11 @@ TWILIO_FROM_NUMBER=
 TELEGRAM_BOT_TOKEN=
 ```
 
-## Architecture
+## Архитектура
 
 ```
 ┌─────────┐      POST /notifications      ┌──────────────┐
-│ Client  │─────────────────────────────>│   FastAPI    │
+│ Клиент  │─────────────────────────────>│   FastAPI    │
 └─────────┘                               │   (API)      │
                                           └───────┬──────┘
                                                   │
@@ -152,8 +152,8 @@ TELEGRAM_BOT_TOKEN=
                      ▼                            ▼                ▼
               ┌─────────────┐            ┌──────────────┐  ┌──────────┐
               │  SQLite/PG  │            │    Redis     │  │  Retry   │
-              │  (delivery  │            │  (queue)     │  │  Worker  │
-              │   log)      │            └──────────────┘  └─────┬────┘
+              │  (лог       │            │  (очередь)   │  │  Worker  │
+              │ доставки)   │            └──────────────┘  └─────┬────┘
               └─────────────┘                                     │
                                                                   │
                      ┌────────────────────────────────────────────┘
@@ -161,7 +161,7 @@ TELEGRAM_BOT_TOKEN=
                      ▼
           ┌──────────────────────┐
           │  NotificationService │
-          │  (Fallback logic)    │
+          │  (Логика fallback)   │
           └───────────┬──────────┘
                       │
         ┌─────────────┼─────────────┐
@@ -172,43 +172,43 @@ TELEGRAM_BOT_TOKEN=
    └────────┘   └────────┘    └──────────┘
 ```
 
-### Fallback Strategy
+### Стратегия каскадной отправки (Fallback)
 
-1. Try **Email** (SMTP).
-2. If failed → try **SMS** (Twilio).
-3. If failed → try **Telegram** (Bot API).
-4. If all failed → mark as `failed`, enqueue for retry.
-5. Retry with exponential backoff (2^attempt seconds).
+1. Попытка **Email** (SMTP).
+2. Если не удалось → попытка **SMS** (Twilio).
+3. Если не удалось → попытка **Telegram** (Bot API).
+4. Если все не удались → статус `failed`, добавление в очередь повторов.
+5. Повтор с экспоненциальной задержкой (2^попытка секунд).
 
-### Key Components
+### Ключевые компоненты
 
-- **FastAPI app** (`src/main.py`): REST endpoints, middleware (correlation_id, logging).
-- **NotificationService** (`src/services/notification.py`): orchestrates fallback, logs attempts.
-- **Providers** (`src/services/providers/`): Email/SMS/Telegram implementations (mock by default, real via env).
-- **Retry Worker** (`src/services/retry.py`): consumes Redis Stream, retries failed deliveries.
-- **Database** (`src/database.py`, `src/models/orm.py`): SQLAlchemy async, stores delivery history.
+- **FastAPI приложение** (`src/main.py`): REST endpoints, middleware (correlation_id, логирование).
+- **NotificationService** (`src/services/notification.py`): управляет fallback, логирует попытки.
+- **Провайдеры** (`src/services/providers/`): реализации Email/SMS/Telegram (моки по умолчанию, реальные через env).
+- **Retry Worker** (`src/services/retry.py`): обрабатывает Redis Stream, повторяет неудачные доставки.
+- **База данных** (`src/database.py`, `src/models/orm.py`): SQLAlchemy async, хранит историю доставок.
 
-## Testing
+## Тестирование
 
-- **Unit** (`tests/unit/`): Mocked providers, service logic.
-- **Integration** (`tests/integration/`): Real API calls, in-memory DB.
-- **E2E** (`tests/e2e/`): Full stack with Redis + SQLite.
+- **Unit** (`tests/unit/`): Замоканные провайдеры, логика сервисов.
+- **Integration** (`tests/integration/`): Реальные API-вызовы, in-memory БД.
+- **E2E** (`tests/e2e/`): Полный стек с Redis + SQLite.
 
 ```bash
 pytest -v --cov=src --cov-report=html
 ```
 
-Coverage report: `htmlcov/index.html`
+Отчёт о покрытии: `htmlcov/index.html`
 
 ## CI/CD
 
-`.gitlab-ci.yml` stages:
+Этапы `.gitlab-ci.yml`:
 
 1. **lint_and_test**: ruff, black, mypy, pytest.
-2. **docker_build**: Build & push image.
-3. **deploy** (optional): K8s/Nomad deployment.
+2. **docker_build**: Сборка и push образа.
+3. **deploy** (опционально): Развертывание в K8s/Nomad.
 
-## Deployment
+## Развертывание
 
 ### Docker
 
@@ -220,7 +220,7 @@ docker run -p 8000:8000 \
   notification-service:latest
 ```
 
-### Kubernetes (example)
+### Kubernetes (пример)
 
 ```yaml
 apiVersion: apps/v1
@@ -244,15 +244,15 @@ spec:
           value: redis://redis-service:6379/0
 ```
 
-## Roadmap
+## Дорожная карта
 
-- [ ] Prometheus metrics (`/metrics`).
-- [ ] Rate limiting (per user/IP).
-- [ ] Template support (Jinja2 for Email/SMS).
-- [ ] Webhooks (callback on delivery status).
-- [ ] Admin UI (view/retry/cancel notifications).
+- [ ] Метрики Prometheus (`/metrics`).
+- [ ] Rate limiting (на пользователя/IP).
+- [ ] Поддержка шаблонов (Jinja2 для Email/SMS).
+- [ ] Webhooks (callback при изменении статуса).
+- [ ] Admin UI (просмотр/повтор/отмена уведомлений).
 
-## License
+## Лицензия
 
-MIT (see [LICENSE](LICENSE))
+MIT (см. [LICENSE](LICENSE))
 

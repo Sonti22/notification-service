@@ -1,4 +1,4 @@
-"""Core notification service with fallback logic."""
+"""Основной сервис уведомлений с логикой каскадной отправки."""
 
 import json
 from datetime import datetime
@@ -28,7 +28,7 @@ logger = get_logger(__name__)
 
 
 class NotificationService:
-    """Orchestrates notification delivery with fallback."""
+    """Управляет доставкой уведомлений с каскадной отправкой (fallback)."""
 
     def __init__(
         self,
@@ -36,11 +36,11 @@ class NotificationService:
         redis_client: aioredis.Redis,  # type: ignore[type-arg]
     ) -> None:
         """
-        Initialize service.
+        Инициализация сервиса.
 
         Args:
-            db_session: SQLAlchemy async session
-            redis_client: Redis client for retry queue
+            db_session: Асинхронная сессия SQLAlchemy
+            redis_client: Redis-клиент для очереди повторов
         """
         self.db = db_session
         self.redis = redis_client

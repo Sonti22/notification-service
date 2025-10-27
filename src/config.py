@@ -1,4 +1,4 @@
-"""Configuration management using pydantic-settings."""
+"""Управление конфигурацией через pydantic-settings."""
 
 from typing import Literal
 
@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Application settings loaded from environment variables."""
+    """Настройки приложения, загружаемые из переменных окружения."""
 
     model_config = SettingsConfigDict(
         env_file=".env",
