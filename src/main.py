@@ -27,22 +27,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     # Startup
     logger.info("Starting notification service...")
+    try:
+        # Initialize database
+        await init_db()
+        logger.info("Database initialized")
 
-    # Initialize database
-    await init_db()
-    logger.info("Database initialized")
+        # Initialize Redis (via dependency)
+        await get_redis()
+        logger.info("Redis connection established")
 
-    # Initialize Redis (via dependency)
-    await get_redis()
-    logger.info("Redis connection established")
-
-    yield
-
-    # Shutdown
-    logger.info("Shutting down notification service...")
-    await close_redis()
-    await close_db()
-    logger.info("Shutdown complete")
+        yield
+    finally:
+        # Shutdown – always run to clean up resources even if startup failed
+        logger.info("Shutting down notification service...")
+        await close_redis()
+        await close_db()
+        logger.info("Shutdown complete")
 
 
 # Create FastAPI app
@@ -72,4 +72,3 @@ if __name__ == "__main__":
         log_level=settings.log_level.lower(),
         reload=True,
     )
-
