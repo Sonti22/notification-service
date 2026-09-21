@@ -1,11 +1,11 @@
-"""Pydantic schemas for API requests and responses."""
+'''Pydantic schemas for API requests and responses.'''
 
 from datetime import datetime
 from enum import Enum
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class DeliveryChannel(str, Enum):
@@ -39,6 +39,16 @@ class NotificationCreate(BaseModel):
         description="Optional metadata (e.g., template_id, priority)",
     )
 
+    @model_validator(mode="after")
+    def _ensure_unique_channels(cls) -> "NotificationCreate":
+        """Validate that the channels list contains no duplicates.
+
+        Duplicate channels would cause unnecessary repeated delivery attempts.
+        """
+        if len(set(self.channels)) != len(self.channels):
+            raise ValueError("'channels' must contain unique values")
+        return self
+
 
 class AttemptInfo(BaseModel):
     """Information about a delivery attempt."""
@@ -69,4 +79,3 @@ class HealthResponse(BaseModel):
 
     status: str = "ok"
     timestamp: datetime = Field(default_factory=datetime.utcnow)
-
