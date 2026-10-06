@@ -32,9 +32,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await init_db()
     logger.info("Database initialized")
 
-    # Initialize Redis (via dependency)
-    await get_redis()
-    logger.info("Redis connection established")
+    # Initialize Redis (via dependency) with resilience
+    try:
+        await get_redis()
+        logger.info("Redis connection established")
+    except Exception as exc:  # Broad catch to handle any connection issues
+        logger.error(f"Failed to connect to Redis during startup: {exc}")
+        # Proceed without Redis; routes that depend on Redis should handle None gracefully
 
     yield
 
@@ -72,4 +76,3 @@ if __name__ == "__main__":
         log_level=settings.log_level.lower(),
         reload=True,
     )
-
