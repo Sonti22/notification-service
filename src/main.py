@@ -32,9 +32,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await init_db()
     logger.info("Database initialized")
 
-    # Initialize Redis (via dependency)
-    await get_redis()
-    logger.info("Redis connection established")
+    # Initialize Redis (via dependency) – tolerate connection errors
+    try:
+        await get_redis()
+        logger.info("Redis connection established")
+    except Exception as exc:  # pragma: no cover
+        logger.error(f"Failed to connect to Redis: {exc}")
+        # Continue without Redis; dependent features should handle missing client
 
     yield
 
@@ -72,4 +76,3 @@ if __name__ == "__main__":
         log_level=settings.log_level.lower(),
         reload=True,
     )
-
